@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="so">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dukaanka Example - Store Shopping</title>
+</head>
+<body>
+  <header>
+    <h1>Dukaanka Example</h1>
+    <p>Ku soo dhufo alaabta, ka dibna hubi cart-kaaga.</p>
+    <hr>
+  </header>
+
+  <main>
+    <section id="products-section">
+      <h2>Alaabooyinka</h2>
+      <div id="products-list">
+        <!-- Alaabaha waxaa lagu buuxin doonaa JavaScript -->
+      </div>
+    </section>
+
+    <section id="cart-section" aria-live="polite">
+      <h2>Cart / Gaadhsi</h2>
+      <div id="cart-empty">Cart-ka wuu banaan yahay.</div>
+      <table id="cart-table" border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; display:none;">
+        <thead>
+          <tr>
+            <th>Magac</th>
+            <th>Qiimo (USD)</th>
+            <th>Tirada</th>
+            <th>Wadarta</th>
+            <th>Ficil</th>
+          </tr>
+        </thead>
+        <tbody id="cart-body"></tbody>
+      </table>
+
+      <div id="cart-summary" style="display:none;">
+        <p>Sh.: <span id="cart-count">0</span> alaab(s)</p>
+        <p>Wadarta guud: $<span id="cart-total">0.00</span></p>
+        <button id="checkout-btn">Checkout</button>
+        <button id="clear-btn">Nadaafad (Clear cart)</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <hr>
+    <p>© Dukaanka Example</p>
+  </footer>
+
+  <script>
+    // Liiska alaabta (waxaad ku dari kartaa/bedeli kartaa)
+    const products = [
+      { id: 1, name: "Parfum A", price: 12.50, desc: "Ur fiican, 50ml" },
+      { id: 2, name: "Lazeez Perfume", price: 18.00, desc: "Scent long-lasting, 100ml" },
+      { id: 3, name: "Cream Skincare", price: 9.99, desc: "Qalalan / caawiya maqaarka" },
+      { id: 4, name: "Shampoo Natural", price: 7.25, desc: "Daryeel timaha dabiiciga" }
+    ];
+
+    // Cart waxaa lagu kaydiyaa halkan (array of {id, qty})
+    let cart = [];
+
+    // --- Rendering alaabooyinka ---
+    function renderProducts() {
+      const container = document.getElementById('products-list');
+      container.innerHTML = ''; // nadiifi
+      products.forEach(p => {
+        // Isticmaal element simple: paragraph iyo button
+        const box = document.createElement('div');
+        box.setAttribute('data-id', p.id);
+        // Isticmaal emoji sawir yar halkii image
+        box.innerHTML = `
+          <h3>${p.name} — $${p.price.toFixed(2)}</h3>
+          <p>${p.desc}</p>
+          <p>Stock: available</p>
+          <button type="button" aria-label="Ku dar ${p.name} cart" onclick="addToCart(${p.id})">Ku dar cart</button>
+          <hr>
+        `;
+        container.appendChild(box);
+      });
+    }
+
+    // --- Cart functions ---
+    function addToCart(productId) {
+      const item = cart.find(i => i.id === productId);
+      if (item) {
+        item.qty += 1;
+      } else {
+        cart.push({ id: productId, qty: 1 });
+      }
+      renderCart();
+    }
+
+    function removeFromCart(productId) {
+      cart = cart.filter(i => i.id !== productId);
+      renderCart();
+    }
+
+    function changeQty(productId, newQty) {
+      newQty = parseInt(newQty, 10);
+      if (isNaN(newQty) || newQty < 1) return;
+      const item = cart.find(i => i.id === productId);
+      if (item) {
+        item.qty = newQty;
+      }
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = [];
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartBody = document.getElementById('cart-body');
+      const cartTable = document.getElementById('cart-table');
+      const cartEmpty = document.getElementById('cart-empty');
+      const cartSummary = document.getElementById('cart-summary');
+
+      if (cart.length === 0) {
+        cartBody.innerHTML = '';
+        cartTable.style.display = 'none';
+        cartSummary.style.display = 'none';
+        cartEmpty.style.display = 'block';
+        document.getElementById('cart-count').textContent = '0';
+        document.getElementById('cart-total').textContent = '0.00';
+        return;
+      }
+
+      cartBody.innerHTML = '';
+      let total = 0;
+      let count = 0;
+
+      cart.forEach(ci => {
+        const p = products.find(x => x.id === ci.id);
+        const lineTotal = p.price * ci.qty;
+        total += lineTotal;
+        count += ci.qty;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td>$${p.price.toFixed(2)}</td>
+          <td>
+            <input type="number" min="1" value="${ci.qty}" style="width:60px" 
+              onchange="changeQty(${ci.id}, this.value)">
+          </td>
+          <td>$${lineTotal.toFixed(2)}</td>
+          <td>
+            <button type="button" onclick="removeFromCart(${ci.id})">Ka saar</button>
+          </td>
+        `;
+        cartBody.appendChild(tr);
+      });
+
+      document.getElementById('cart-total').textContent = total.toFixed(2);
+      document.getElementById('cart-count').textContent = count;
+      cartTable.style.display = '';
+      cartSummary.style.display = '';
+      cartEmpty.style.display = 'none';
+    }
+
+    // Checkout (simplified)
+    function checkout() {
+      if (cart.length === 0) {
+        alert('Cart-ka waa banaan.');
+        return;
+      }
+      let summary = 'Waxaad dalbatay:\n';
+      cart.forEach(ci => {
+        const p = products.find(x => x.id === ci.id);
+        summary += ${p.name} x ${ci.qty}  — $${(p.price * ci.qty).toFixed(2)}\n;
+      });
+      summary += '\nWadarta guud: $' + document.getElementById('cart-total').textContent;
+      // Tusaale: halkan waxaad ku diri kartaa server ama samee lacag-bixin
+      alert(summary + '\n\nWaad ku mahadsan tahay dalabkaaga (tusaale).');
+      clearCart();
+    }
+
+    // Event listeners for buttons
+    document.addEventListener('DOMContentLoaded', () => {
+      renderProducts();
+      renderCart();
+
+      document.getElementById('checkout-btn').addEventListener('click', checkout);
+      document.getElementById('clear-btn').addEventListener('click', () => {
+        if (confirm('Ma rabtaa in dhammaan alaabaha laga saaro cart-ka?')) {
+          clearCart();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
